@@ -95,13 +95,22 @@ class WS:
             )
 
         elif payload["op"] == "playerUpdate":
+            guild_id = int(payload["guildId"])
+            node = await self.client.get_guild_node(guild_id)
+            position = payload["state"].get("position")
+            if node is None:
+                return
+            
+            if node.queue:
+                node.queue[0].position = position / 1000
+                await self.client.set_guild_node(guild_id, node)
             data = PlayerUpdateEvent(
-                guild_id=payload["guildId"],
+                guild_id=guild_id,
                 time=payload["state"]["time"],
-                position=payload["state"].get("position"),
-                connected=payload["state"]["connected"],
+                position=position / 1000 if isinstance(position, int) else None,
+                connected=payload["state"].get("connected", None),
             )
-            self.emitter.emit("playerUpdate", data)
+            self.emitter.emit("playerUpdateEvent", data)
 
         elif payload["op"] == "event":
 
@@ -132,7 +141,7 @@ class WS:
                     await self.client.play(guild_id, node.queue[0], node.queue[0].requester, True)
 
             elif payload["type"] == "TrackExceptionEvent":
-                self.emitter.emit("TrackExceptionEvent", TrackExceptionEvent(track, guild_id, payload["exception"], payload["message"], payload["severity"], payload["cause"]))
+                self.emitter.emit("TrackExceptionEvent", TrackExceptionEvent(track, guild_id, payload["exception"], payload.get("message"), payload.get("severity"), payload.get("cause")))
 
             elif payload["type"] == "TrackStuckEvent":
                 self.emitter.emit("TrackStuckEvent", TrackStuckEvent(track, guild_id, payload["thresholdMs"]))
@@ -149,4 +158,9 @@ class WS:
             _LOGGER.error("Not connected to websocket")
             await self.check_connection()
             return
-        await self.ws.send_json(payload)
+        try:
+            await self.ws.send_json(payload)
+        except ConnectionResetError:
+            _LOGGER.error("ConnectionResetError: Cannot write to closing transport")
+            await self.check_connection()
+            return
