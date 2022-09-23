@@ -1,12 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from lavaplayer.exceptions import FiltersError
 import typing as t
 
-
-class Event:
-    """
-    The class is a base event for websocket.
-    """
 
 
 @dataclass
@@ -28,15 +23,16 @@ class Track:
     """
     track: str
     identifier: str
-    isSeekable: bool
+    is_seekable: bool
     author: str
     length: int
-    isStream: bool
+    is_stream: bool
     position: int
     title: str
     uri: str
     requester: t.Union[str, None] = None
-    sourceName: t.Optional[str] = None
+    source_name: t.Optional[str] = None
+    timestamp: t.Optional[t.Any] = None
     """
     optional option to save a requester for the track
     """
@@ -44,6 +40,41 @@ class Track:
     def __repr__(self) -> str:
         return self.title
 
+
+@dataclass
+class Node:
+    """
+    The node is saved the queue guild list and volume and etc information.
+    """
+    guild_id: int
+    queue: t.List[Track]
+    volume: int
+    is_pause: bool = False
+    repeat: bool = False
+    queue_repeat: bool = False
+    is_connected: bool = False
+
+
+@dataclass
+class ConnectionInfo:
+    """
+    A info for Connection just use to save the connection information.
+    """
+    guild_id: int
+    session_id: str
+    channel_id: t.Optional[int]
+
+
+@dataclass
+class PlayList:
+    name: str
+    selected_track: int
+    tracks: t.List[Track]
+
+class Event:
+    """
+    The class is a base event for websocket.
+    """
 
 @dataclass
 class TrackStartEvent(Event):
@@ -92,7 +123,6 @@ class WebSocketClosedEvent(Event):
     """
     Event on websocket closed.
     """
-    track: Track
     guild_id: int
     code: int
     reason: str
@@ -119,36 +149,6 @@ class ErrorEvent(Event):
     exception: Exception
 
 
-@dataclass
-class Node:
-    """
-    The node is saved the queue guild list and volume and etc information.
-    """
-    guild_id: int
-    queue: t.List[Track]
-    volume: int
-    is_pause: bool = False
-    repeat: bool = False
-    is_connected: bool = False
-
-
-@dataclass
-class ConnectionInfo:
-    """
-    A info for Connection just use to save the connection information.
-    """
-    guild_id: int
-    session_id: str
-    channel_id: t.Optional[int]
-
-
-@dataclass
-class PlayList:
-    name: str
-    selected_track: int
-    tracks: t.List[Track]
-
-    
 @dataclass(init=True)
 class Filters:
     """
